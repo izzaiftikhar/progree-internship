@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Realtime Hub</title>
+<style>
+  body{font-family:system-ui,sans-serif;margin:0;display:flex;height:100vh;background:#0f172a;color:#e2e8f0}
+  aside{width:220px;background:#1e293b;padding:16px;overflow:auto}
+  main{flex:1;display:flex;flex-direction:column}
+  #messages{flex:1;overflow:auto;padding:16px}
+  .msg{margin:6px 0}.sys{color:#94a3b8;font-style:italic}.time{color:#64748b;font-size:12px}
+  button,input{padding:8px;border-radius:6px;border:0}
+  .ch{display:block;width:100%;margin:4px 0;text-align:left;background:#334155;color:#fff;cursor:pointer}
+  .ch.active{background:#6366f1}
+  form{display:flex;gap:8px;padding:12px;background:#1e293b}form input{flex:1}
+  h4{margin:12px 0 4px;color:#94a3b8}
+</style></head>
+<body>
+<aside>
+  <h3>Channels</h3><div id="channels"></div>
+  <h4>In channel</h4><div id="chusers"></div>
+  <h4>Online now</h4><div id="online"></div>
+</aside>
+<main>
+  <div id="messages"></div>
+  <div id="typing" class="time" style="padding:0 16px;height:16px"></div>
+  <form id="form"><input id="text" placeholder="Type a message..." autocomplete="off"><button>Send</button></form>
+</main>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const username = prompt('Choose a username') || 'guest' + Math.floor(Math.random()*1000);
+const socket = io({ auth: { username } });
+let current = null;
+const $ = (id) => document.getElementById(id);
+const add = (html, cls='') => { const d=document.createElement('div'); d.className='msg '+cls; d.innerHTML=html; $('messages').appendChild(d); $('messages').scrollTop=1e9; };
+const esc = (s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+socket.on('connect_error', e => alert(e.message));
+socket.on('channels', list => {
+  $('channels').innerHTML = '';
+  list.forEach(c => { const b=document.createElement('button'); b.className='ch'; b.textContent='#'+c; b.onclick=()=>switchTo(c); b.id='ch-'+c; $('channels').appendChild(b); });
+  switchTo(list[0]);
+});
+function switchTo(c){
+  if (current) socket.emit('channel:leave', current);
+  current = c; $('messages').innerHTML='';
+  document.querySelectorAll('.ch').forEach(b=>b.classList.toggle('active', b.id==='ch-'+c));
+  socket.emit('channel:join', c);
+}
+socket.on('message', m => m.channel===current && add(`<b>${esc(m.user)}</b> <span class="time">${new Date(m.timestamp).toLocaleTimeString()}</span><br>${esc(m.text)}`));
+socket.on('system', m => m.channel===current && add(esc(m.text), 'sys'));
+socket.on('channel:users', d => d.channel===current && ($('chusers').innerHTML = d.users.map(esc).join('<br>')));
+socket.on('presence:update', u => $('online').innerHTML = u.map(esc).join('<br>'));
+let t; socket.on('typing', d => { if(d.channel===current){ $('typing').textContent=d.user+' is typing...'; clearTimeout(t); t=setTimeout(()=>$('typing').textContent='',1500);} });
+$('text').addEventListener('input', () => current && socket.emit('typing', current));
+$('form').onsubmit = e => { e.preventDefault(); const text=$('text').value.trim(); if(!text) return; socket.emit('message',{channel:current,text},r=>{ if(!r.ok) add(esc(r.error),'sys'); }); $('text').value=''; };
+</script>
+</body></html>
