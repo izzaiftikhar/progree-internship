@@ -5,3 +5,5 @@ node_modules/
 npm-debug.log*
 coverage/
 .DS_Store
+
+task-03-realtime-hub/logs/*.log

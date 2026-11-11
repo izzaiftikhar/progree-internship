@@ -10,8 +10,8 @@ const ORDERS = process.env.ORDERS_URL || 'http://localhost:4002';
 const NOTIFY = process.env.NOTIFY_URL || 'http://localhost:4003';
 
 const ADMIN = {
-  email: 'admin@example.com',
-  password: 'Admin@12345',
+  email: process.env.ADMIN_EMAIL || 'admin@example.com',
+  password: process.env.ADMIN_PASSWORD,
 };
 
 const email = `user${Date.now()}@test.com`;

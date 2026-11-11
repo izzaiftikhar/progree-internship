@@ -1,5 +1,7 @@
 {
   "name": "task4-microservices",
   "version": "1.0.0",
-  "scripts": { "test": "node --test tests/" }
+  "scripts": {
+    "test": "node --env-file=.env --test tests/e2e.test.js"
+  }
 }
